@@ -1,0 +1,127 @@
+﻿
+@{
+    ViewData["Title"] = "Index";
+}
+
+<div>
+    <div class="row" id="ua" style="display: none; margin-bottom: 6px;">
+        <div class="text-center" style="width: 800px; margin: 5px auto; background: white; margin-bottom: -20px;">
+            <img style="width:150px" src="/logo/logo.jpg" alt="Alternate Text" />
+            <h1>Welcome to ChatApp</h1>
+            <h4>Send free messages to your friends<br />and family members and keep connected.</h4>
+        </div>
+        <div class="card" style="width:800px; margin:20px auto;border:none">
+            <div class="card-body">
+                <div class="col-6 offset-3">
+                    <div class="form-group row" style="margin:20px auto">
+                        <label class="col-form-label col-12">Username</label>
+                        <div class="col-12">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="u">
+                            </div>
+                        </div>
+                        <div class="col-12 mt-3 mb-4">
+                            <div class="input-group">
+                                <button type="button" id="c" class="btn btn-info m-auto text-white" style="margin-left:6px;">Join Chat</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row my-2" id="ca" style="display:none">
+        <div class="card" style="width:800px; margin:10px auto;padding-left:0">
+            <div class="card-body" style="padding:0">
+                <div class="col-3 float-start text-white" style="padding: 20px; background: #0dcaf0; height: 100%; ">
+                    <h2>All Users</h2>
+                    <ul class="list-group" id="users"></ul>
+                </div>
+                <div class="col-9 float-end" style=" padding: 10px;">
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <div class="list-group" style="border: solid; min-height: 400px;" id="chats"></div>
+                        </div>
+                    </div>
+                    <div class="form-group row mb-2">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="chatMessage" />
+                            <button type="button" id="s" class="btn btn-info" style="margin-left:4px;color:white">Send</button>
+                            <button type="button" id="br" class="btn btn-outline-info">Browse</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<input type="file" id="f" style="display:none" accept=".jpg,.png,.gif,.pdf,.docx" />
+
+@section scripts{
+    <script src="~/libs/jquery/jquery.js"></script>
+    <script src="~/libs/signalr/signalr.js"></script>
+
+
+    <script type="text/javascript">
+        var con = new signalR.HubConnectionBuilder().withUrl("/message").build();
+        con.on('Connected', (m) => {
+            $("#ua").show();
+        });
+        con.on('Joined', (m) => {
+            $("#ua").hide();
+            $("#da").show();
+            $("#ca").show();
+            $("#d").html(displayName);
+        });
+        con.on('DuplicateUser', (m) => {
+            console.log(m);
+        });
+        con.on('UpdateUsers', (userList) => {
+            console.log(userList);
+            $("#users").empty();
+            for (var i = 0; i < userList.length; i++) {
+                $("#users").append(
+                    `<li class='list-group-item text-white' style="border:none;background: #0dcaf0;">${userList[i]}</li>`
+                );
+            }
+        });
+        con.on("Message", (u, m) => {
+            if (displayName == u) {
+                $("#chats").append(`<li class="list-group-item" style="border:none; text-align:end; background: #e8fbff; margin: 10px;"><span style="font-weight:bold;color:blue;">${u}</span> <br/> ${m}</li>`)
+            }
+            else {
+                $("#chats").append(`<li class="list-group-item" style="border:none;"><span style="font-weight:bold; color:blue;">${u}</span> <br/> ${m}</li>`)
+            }
+        });
+        var displayName = '';
+        con.start().then(() => {
+            $("#ua").show();
+            $("#c").click(() => {
+                displayName = $("#u").val();
+                con.invoke("AddMe", displayName);
+                $("#u").val('');
+            });
+            $("#s").click(() => {
+                if ($("#chatMessage").val() == "") return;
+                con.invoke("Send", displayName, $("#chatMessage").val());
+                $("#chatMessage").val('');
+            });
+            $("#br").click(() => {
+                $("#f").click();
+            });
+            $("#f").change(() => {
+                var file = document.getElementById("f").files[0];
+                console.log(file.name);
+                console.log(file.type);
+                var reader = new FileReader();
+                reader.onloadend = function () {
+                    var data = { filename: file.name, image: reader.result };
+                    console.log(data);
+                    con.invoke("Upload", displayName, data);
+                }
+                reader.readAsDataURL(file);
+            })
+        })
+    </script>
+}
+
