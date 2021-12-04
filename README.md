@@ -1,5 +1,7 @@
 # SignalR_Chat_App
+
 A real-time chat application using .NET, SignalR.
+
 ### Project Information: 
    * __Project Owner :__ *__Sharmin Sultana__*
    * __Project Number :__ 11
